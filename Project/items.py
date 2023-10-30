@@ -20,3 +20,7 @@ class CompanyItem(scrapy.Item):
     DirectorName = scrapy.Field()
     DirectorAddress = scrapy.Field()
     DirectorId = scrapy.Field()
+    NumCars = scrapy.Field()
+    NumPeople = scrapy.Field()
+    DistanceToBusinessMeters = scrapy.Field()
+    DistanceToBusinessDriveSeconds = scrapy.Field()

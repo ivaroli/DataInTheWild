@@ -15,7 +15,7 @@ class CompanySpider(scrapy.Spider):
     
     def start_requests(self):
         yield SeleniumRequest(
-            url="https://datacvr.virk.dk/soegeresultater?sideIndex=0&region=29190623&virksomhedsstatus=aktive&size=1000", 
+            url="https://datacvr.virk.dk/soegeresultater?sideIndex=0&region=29190623&virksomhedsstatus=aktive&size=10", 
             callback=self.parse, 
             headers={"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36"}, 
             wait_until=EC.element_to_be_clickable((By.CSS_SELECTOR, 'a.button.button-unstyled')),
@@ -26,15 +26,15 @@ class CompanySpider(scrapy.Spider):
     def parse(self, response: scrapy.Request, index):
         list = response.selector.css('.soegeresultaterTabel>div')
         
-        if len(list) > 0:
-            yield SeleniumRequest(
-                url=f"https://datacvr.virk.dk/soegeresultater?sideIndex={index+1}&region=29190623&virksomhedsstatus=aktive&size=1000", 
-                callback=self.parse, 
-                headers={"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36"}, 
-                wait_until=EC.element_to_be_clickable((By.CSS_SELECTOR, 'a.button.button-unstyled')),
-                wait_time=10,
-                cb_kwargs={'index':index+1}
-            )
+        # if len(list) > 0:
+        #     yield SeleniumRequest(
+        #         url=f"https://datacvr.virk.dk/soegeresultater?sideIndex={index+1}&region=29190623&virksomhedsstatus=aktive&size=1000", 
+        #         callback=self.parse, 
+        #         headers={"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36"}, 
+        #         wait_until=EC.element_to_be_clickable((By.CSS_SELECTOR, 'a.button.button-unstyled')),
+        #         wait_time=10,
+        #         cb_kwargs={'index':index+1}
+        #     )
         
         for item in list:
             link = item.css('a.button.button-unstyled::attr(href)').extract_first()
@@ -58,7 +58,7 @@ class CompanySpider(scrapy.Spider):
         
         company["Name"] = data["stamdata"]["navn"]
         company["CVR"] = data["stamdata"]["cvrnummer"]
-        company["BusinessAddress"] = data["stamdata"]["adresse"]
+        company["BusinessAddress"] = data["stamdata"]["adresse"].replace("\n", ", ")
         company["StartDate"] = data["stamdata"]["startdato"]
         company["Status"] = data["stamdata"]["status"]
         company["IndustryCode"] = data["udvidedeOplysninger"]["hovedbranche"]["branchekode"]
@@ -81,4 +81,5 @@ class CompanySpider(scrapy.Spider):
             company["DirectorName"] = p_data['senesteNavn']
             company["DirectorAddress"] = p_data['adresse']
             company["DirectorId"] = p_data['id']
+        company["DirectorAddress"] = company["DirectorAddress"].replace("\n", ", ")
         yield company
