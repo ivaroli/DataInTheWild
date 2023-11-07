@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import json
 
-# Define the URL of the website you want to scrape
+# Define URL
 url = 'https://www.globalis.dk/Lande'
 
 # Send an HTTP GET request to the URL
