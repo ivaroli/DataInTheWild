@@ -73,9 +73,13 @@ LOG_LEVEL = "WARNING"
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-   "Project.pipelines.ImagePipeline": 300,
-   "Project.pipelines.DistancePipeline": 400,
+   "Project.pipelines.DublicateFilterPipeline": 100,
+   "Project.pipelines.AddressFilterPipeline": 200,
+   "Project.pipelines.CapitalFilterPipeline": 300,
+   "Project.pipelines.ImagePipeline": 400,
+   "Project.pipelines.DistancePipeline": 500,
 }
+
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/autothrottle.html

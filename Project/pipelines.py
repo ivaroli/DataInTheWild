@@ -15,6 +15,7 @@ from cvlib.object_detection import draw_bbox
 from urllib.request import urlopen
 import urllib.parse
 import requests
+import json
 
 class ImagePipeline:
     _headings = [0, 90, 180, 270]
@@ -33,22 +34,25 @@ class ImagePipeline:
         numPeople = 0
         numCars = 0
         
-        for heading in self._headings:
-            url = f"{self._baseUrl}{urllib.parse.quote(adapter['DirectorAddress'])}&size={self._size}&fov={self._fov}&heading={heading}&key={self._apiKey}"
+        try:
+            for heading in self._headings:
+                url = f"{self._baseUrl}{urllib.parse.quote(adapter['DirectorAddress'])}&size={self._size}&fov={self._fov}&heading={heading}&key={self._apiKey}"
 
-            req = urlopen(url)
-            image = np.asarray(bytearray(req.read()), dtype="uint8")
-            image = cv2.imdecode(image, cv2.IMREAD_COLOR) 
-            image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-            labels = self.image_detection(image)     
-            
-            # add num of lables to item
-            numPeople = int(0 if numPeople is None else numPeople) + labels.count('person')
-            numCars = int(0 if numCars is None else numCars) + labels.count('car')
-        adapter["NumPeople"] = numPeople
-        adapter["NumCars"] = numCars
-
-        return item
+                req = urlopen(url)
+                image = np.asarray(bytearray(req.read()), dtype="uint8")
+                image = cv2.imdecode(image, cv2.IMREAD_COLOR) 
+                image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+                labels = self.image_detection(image)     
+                
+                # add num of lables to item
+                numPeople = int(0 if numPeople is None else numPeople) + labels.count('person')
+                numCars = int(0 if numCars is None else numCars) + labels.count('car')
+            adapter["NumPeople"] = numPeople
+            adapter["NumCars"] = numCars
+        except:
+            logging.warning(f"{adapter['CVR']} Unable to get images")
+        finally:
+            return item
     
     
 class DistancePipeline:
@@ -71,17 +75,44 @@ class DistancePipeline:
         except:
             adapter["DistanceToBusinessMeters"] = None
             adapter["DistanceToBusinessDriveSeconds"] = None
+            logging.warning(f"{adapter['CVR']} Unable to get distance")
         finally:
             return item
     
-class DuplicatesPipeline:
+class AddressFilterPipeline:
+    def __init__(self):
+        with open('./countries.json', encoding="utf-8") as json_file:
+            self.countries = json.load(json_file)
+    
+    def process_item(self, item, spider):
+        adapter = ItemAdapter(item)
+        
+        if adapter["BusinessAddress"] == adapter["DirectorAddress"]:
+            raise DropItem(f"Business address same as director address: {item!r}")
+        elif any(country in adapter["BusinessAddress"] for country in self.countries):
+            raise DropItem(f"Director address in another country: {item!r}")
+        else:
+            logging.warning(f"{adapter['CVR']} has a valid address")
+            return item
+    
+class CapitalFilterPipeline:
+    def process_item(self, item, spider):
+        adapter = ItemAdapter(item)
+        if adapter["RegisteredCapital"] <= 40000:
+            raise DropItem(f"Capital too low: {item!r}")
+        else:
+            logging.warning(f"{adapter['CVR']} has a valid capital")
+            return item
+        
+        
+class DublicateFilterPipeline:
     def __init__(self):
         self.ids_seen = set()
 
     def process_item(self, item, spider):
         adapter = ItemAdapter(item)
-        if adapter["id"] in self.ids_seen:
-            raise DropItem(f"Duplicate item found: {item!r}")
+        if adapter['CVR'] in self.ids_seen:
+            raise DropItem(f"Duplicate item found: {adapter['CVR']}")
         else:
-            self.ids_seen.add(adapter["id"])
+            self.ids_seen.add(adapter['CVR'])
             return item
