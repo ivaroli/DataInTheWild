@@ -15,6 +15,7 @@ from cvlib.object_detection import draw_bbox
 from urllib.request import urlopen
 import urllib.parse
 import requests
+import pandas as pd
 import json
 
 class ImagePipeline:
@@ -116,3 +117,33 @@ class DublicateFilterPipeline:
         else:
             self.ids_seen.add(adapter['CVR'])
             return item
+
+
+class IndustryCodePipeline:
+    def __init__(self):
+        self.ids_seen = set()      
+        industry_codes = pd.read_html('https://dinero.dk/ordbog/branchekode/')[0]
+        industry_codes.columns = industry_codes.iloc[0]
+        industry_codes = industry_codes[1:]
+
+        industry_df = {
+            "Group": [],
+            "Code": []
+        }
+
+        for index, row in industry_codes.iterrows():
+            try:
+                start, end = [int(x) for x in row["Hovedgrupper"].split("-")]
+                codes = ["0"+str(x) if len(str(x)) == 1 else str(x) for x in range(start, end + 1)]
+                industry_df["Code"] += codes
+                industry_df["Group"] += [row["Hovedafdeling"]]*len(codes)
+            except:
+                continue
+            
+        self.industry_codes = pd.DataFrame(industry_df)
+        
+        
+    def process_item(self, item, spider):
+        adapter = ItemAdapter(item)
+        
+        pass
