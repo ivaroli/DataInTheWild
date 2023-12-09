@@ -15,7 +15,7 @@ class CompanySpider(scrapy.Spider):
     def start_requests(self):
         for letter in list(string.ascii_lowercase):
             yield SeleniumRequest(
-                url=f"https://datacvr.virk.dk/soegeresultater?fritekst={letter}&sideIndex=0&region=29190623&antalAnsatte=ANTAL_2_4%252CANTAL_5_9%252CANTAL_10_19%252CANTAL_20_49%252CANTAL_50_99&virksomhedsform=60%252C130%252C140%252C80%252C210%252C81%252C30&virksomhedsstatus=aktiv%252Cnormal%252Caktive&size=10", 
+                url=f"https://datacvr.virk.dk/soegeresultater?fritekst={letter}&sideIndex=0&region=29190623&antalAnsatte=ANTAL_2_4%252CANTAL_5_9%252CANTAL_10_19%252CANTAL_20_49%252CANTAL_50_99&virksomhedsform=60%252C130%252C140%252C80%252C210%252C81%252C30&virksomhedsstatus=aktiv%252Cnormal%252Caktive&size=3000", 
                 callback=self.parse, 
                 headers={"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"}, 
                 wait_until=EC.element_to_be_clickable((By.CSS_SELECTOR, 'a.button.button-unstyled')),
@@ -27,15 +27,15 @@ class CompanySpider(scrapy.Spider):
     def parse(self, response: scrapy.Request, index, letter):
         list = response.selector.css('.soegeresultaterTabel>div')
         
-        # if len(list) > 0:
-        #     yield SeleniumRequest(
-        #         url=f"https://datacvr.virk.dk/soegeresultater?fritekst={letter}&sideIndex={index+1}&region=29190623&antalAnsatte=ANTAL_2_4%252CANTAL_5_9%252CANTAL_10_19%252CANTAL_20_49%252CANTAL_50_99&virksomhedsform=60%252C130%252C140%252C80%252C210%252C81%252C30&virksomhedsstatus=aktiv%252Cnormal%252Caktive&size=3000", 
-        #         callback=self.parse, 
-        #         headers={"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"}, 
-        #         wait_until=EC.element_to_be_clickable((By.CSS_SELECTOR, 'a.button.button-unstyled')),
-        #         wait_time=15,
-        #         cb_kwargs={'index':index+1}
-        #     )
+        if len(list) > 0:
+            yield SeleniumRequest(
+                url=f"https://datacvr.virk.dk/soegeresultater?fritekst={letter}&sideIndex={index+1}&region=29190623&antalAnsatte=ANTAL_2_4%252CANTAL_5_9%252CANTAL_10_19%252CANTAL_20_49%252CANTAL_50_99&virksomhedsform=60%252C130%252C140%252C80%252C210%252C81%252C30&virksomhedsstatus=aktiv%252Cnormal%252Caktive&size=3000", 
+                callback=self.parse, 
+                headers={"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"}, 
+                wait_until=EC.element_to_be_clickable((By.CSS_SELECTOR, 'a.button.button-unstyled')),
+                wait_time=15,
+                cb_kwargs={'index':index+1}
+            )
         
         for item in list:
             link = item.css('a.button.button-unstyled::attr(href)').extract_first()
