@@ -22,7 +22,6 @@ class CompanySpider(scrapy.Spider):
                 wait_time=15,
                 cb_kwargs={'index':0, 'letter': letter}
             )
-            break
 
     def parse(self, response: scrapy.Request, index, letter):
         list = response.selector.css('.soegeresultaterTabel>div')
