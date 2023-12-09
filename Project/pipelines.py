@@ -55,7 +55,6 @@ class ImagePipeline:
         finally:
             return item
     
-    
 class DistancePipeline:
     _apiKey = "AIzaSyCFW5YC1zjDR36AXc8e8BK9UcpQKJYyU4c"
     _baseUrl = "https://maps.googleapis.com/maps/api/distancematrix/json?destinations="
@@ -105,7 +104,6 @@ class CapitalFilterPipeline:
             logging.warning(f"{adapter['CVR']} has a valid capital")
             return item
         
-        
 class DublicateFilterPipeline:
     def __init__(self):
         self.ids_seen = set()
@@ -118,32 +116,62 @@ class DublicateFilterPipeline:
             self.ids_seen.add(adapter['CVR'])
             return item
 
-
 class IndustryCodePipeline:
     def __init__(self):
-        self.ids_seen = set()      
         industry_codes = pd.read_html('https://dinero.dk/ordbog/branchekode/')[0]
         industry_codes.columns = industry_codes.iloc[0]
         industry_codes = industry_codes[1:]
 
         industry_df = {
-            "Group": [],
-            "Code": []
+            "IndustryGroup": [],
+            "IndustryShortCode": []
         }
 
         for index, row in industry_codes.iterrows():
-            try:
-                start, end = [int(x) for x in row["Hovedgrupper"].split("-")]
-                codes = ["0"+str(x) if len(str(x)) == 1 else str(x) for x in range(start, end + 1)]
-                industry_df["Code"] += codes
-                industry_df["Group"] += [row["Hovedafdeling"]]*len(codes)
-            except:
-                continue
+            if row["Hovedafdeling"] == "Information og kommunikation":
+                codes = ["0"+str(x) if len(str(x)) == 1 else str(x) for x in range(58, 64)]
+                industry_df["IndustryShortCode"] += codes
+                industry_df["IndustryGroup"] += [row["Hovedafdeling"]]*len(codes)
+            else:
+                try:
+                    start, end = [int(x) for x in row["Hovedgrupper"].split("-")]
+                    codes = ["0"+str(x) if len(str(x)) == 1 else str(x) for x in range(start, end + 1)]
+                    industry_df["IndustryShortCode"] += codes
+                    industry_df["IndustryGroup"] += [row["Hovedafdeling"]]*len(codes)
+                except:
+                    industry_df["IndustryShortCode"] += [row["Hovedgrupper"]] 
+                    industry_df["IndustryGroup"] += [row["Hovedafdeling"]]
             
-        self.industry_codes = pd.DataFrame(industry_df)
+            
+        self.industry_codes = pd.DataFrame(industry_df).set_index("IndustryShortCode").to_dict("index")
         
         
     def process_item(self, item, spider):
         adapter = ItemAdapter(item)
         
-        pass
+        adapter["IndustryGroup"] = self.industry_codes[adapter["IndustryShortCode"]]["IndustryGroup"]
+        return item
+    
+class LatLongPipeline:
+    _apiKey = "AIzaSyCFW5YC1zjDR36AXc8e8BK9UcpQKJYyU4c"
+    
+    def process_item(self, item, spider):
+        adapter = ItemAdapter(item)
+        try:
+            response_director = requests.get(f"https://maps.googleapis.com/maps/api/geocode/json?address={adapter['DirectorAddress']}&key={self._apiKey}")
+            resp_json_payload_director = response_director.json()
+            adapter["DirectorAddressLatitude"] = resp_json_payload_director['results'][0]['geometry']['location']["lat"]
+            adapter["DirectorAddressLongitude"] = resp_json_payload_director['results'][0]['geometry']['location']["lng"]
+        except:
+            adapter["DirectorAddressLatitude"] = None
+            adapter["DirectorAddressLongitude"] = None
+        
+        try:
+            response_business = requests.get(f"https://maps.googleapis.com/maps/api/geocode/json?address={adapter['BusinessAddress']}&key={self._apiKey}")
+            resp_json_payload_business = response_business.json()
+            adapter["BusinessAddressLatitude"] = resp_json_payload_business['results'][0]['geometry']['location']["lat"]
+            adapter["BusinessAddressLongitude"] = resp_json_payload_business['results'][0]['geometry']['location']["lng"]
+        except:
+            adapter["BusinessAddressLatitude"] = None
+            adapter["BusinessAddressLongitude"] = None
+        return item

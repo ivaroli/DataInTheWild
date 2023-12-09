@@ -78,6 +78,8 @@ ITEM_PIPELINES = {
    "Project.pipelines.CapitalFilterPipeline": 300,
    "Project.pipelines.ImagePipeline": 400,
    "Project.pipelines.DistancePipeline": 500,
+   "Project.pipelines.IndustryCodePipeline": 600,
+   "Project.pipelines.LatLongPipeline": 700,
 }
 
 
